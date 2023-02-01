@@ -89,6 +89,7 @@ export class PullRequestCommentBasedLabelManager {
   }
 
   private async addLabelToPullRequest(label: string): Promise<ReturnType<typeof this.client.rest.issues.addLabels>> {
+    console.log('At least fucking gets here');
     return this.client.rest.issues.addLabels({
       ...this.repo,
       issue_number: this.props.pr,
@@ -99,13 +100,17 @@ export class PullRequestCommentBasedLabelManager {
   }
 
   private async tryAddLabel(options: TryAddLabelOptions): Promise<void> {
+    console.log('What about here?');
     if (this.pullRequestHasLabel(options.exception)) {
       console.log(`Label '${options.label}' not added to PR ${this.props.pr} due to label '${options.exception}.'`);
     }
+    console.log('This one works fine');
 
     if (this.pullRequestHasLabel(options.label)) {
       console.log(`Label '${options.label}' not added to PR ${this.props.pr} because it is already present.`);
     }
+
+    console.log('So does this one.');
 
     const addLabelResponse = await this.addLabelToPullRequest(options.label);
     console.log(`Label '${addLabelResponse.data[0].name}' added to PR ${this.props.pr}.`);
