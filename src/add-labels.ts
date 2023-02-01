@@ -126,7 +126,6 @@ export class PullRequestCommentBasedLabelManager {
         exception: Label.EXEMPTION_DENIED,
       }));
     }
-    console.log(statuses);
     return statuses;
   }
 }
