@@ -96,33 +96,35 @@ export class PullRequestCommentBasedLabelManager {
     });
   }
 
-  private async tryAddLabel(options: TryAddLabelOptions): Promise<void> {
+  private async tryAddLabel(options: TryAddLabelOptions): Promise<string> {
     if (this.pullRequestHasLabel(options.exception)) {
-      console.log(`Label '${options.label}' not added to PR ${this.props.pr} due to label '${options.exception}.'`);
+      return `Label '${options.label}' not added to PR ${this.props.pr} due to label '${options.exception}.'`;
     }
 
     if (this.pullRequestHasLabel(options.label)) {
-      console.log(`Label '${options.label}' not added to PR ${this.props.pr} because it is already present.`);
+      return `Label '${options.label}' not added to PR ${this.props.pr} because it is already present.`;
     }
 
     const addLabelResponse = await this.addLabelToPullRequest(options.label);
     console.log(addLabelResponse);
-    console.log(`Label '${addLabelResponse.data[0].name}' added to PR ${this.props.pr}.`);
+    return `Label '${addLabelResponse.data.pop()?.name}' added to PR ${this.props.pr}.`;
   }
 
-  public async addLabels() {
-
+  public async addLabels(): Promise<string[]> {
+    const statuses: string[] = [];
     if (this.commentHasText(CommentText.CLARIFICATION_NEEDED)) {
-      await this.tryAddLabel({
+      statuses.push(await this.tryAddLabel({
         label: Label.CLARIFICATION_NEEDED,
-      });
+      }));
     }
 
     if (this.commentHasText(CommentText.EXEMPTION_REQUESTED)) {
-      await this.tryAddLabel({
+      statuses.push(await this.tryAddLabel({
         label: Label.EXEMPTION_REQUESTED,
         exception: Label.EXEMPTION_DENIED,
-      });
+      }));
     }
+
+    return statuses;
   }
 }

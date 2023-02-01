@@ -13,7 +13,7 @@ async function run() {
     labels: github.context.payload.issue!.labels,
   });
 
-  await labelManager.addLabels();
+  console.log(await labelManager.addLabels());
 };
 
 run().catch(error => {
