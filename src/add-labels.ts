@@ -1,8 +1,8 @@
 import * as github from '@actions/github';
+import { WebhookPayload } from '@actions/github/lib/interfaces';
 
 interface GitHubPullRequest {
-  readonly author: string;
-  readonly state: string;
+  readonly number: number;
   readonly labels: string[];
 }
 
@@ -12,11 +12,17 @@ interface GitHubComment {
   readonly body: string;
 }
 
+interface ContextPayloadComment {
+  readonly [key: string]: any;
+  readonly id: number;
+
+}
+
 interface PullRequestCommentBasedLabelManagerProps {
   readonly owner: string;
   readonly repo: string;
-  readonly commentId: number;
-  readonly pullRequestNumber: number;
+  readonly comment: ContextPayloadComment;
+  readonly pr: WebhookPayload['pull_request'];
 }
 
 /**
@@ -69,58 +75,47 @@ enum CommentText {
 interface TryAddLabelOptions {
   label: Label;
   exception?: Label;
-  pr: GitHubPullRequest;
-  comment: GitHubComment;
 }
 
 export class PullRequestCommentBasedLabelManager {
   private readonly client: ReturnType<typeof github.getOctokit>;
   private readonly repo: { owner: string; repo: string };
+  private readonly comment: GitHubComment;
+  private readonly pr: GitHubPullRequest;
 
 
   constructor(token: string, private readonly props: PullRequestCommentBasedLabelManagerProps) {
     this.client = github.getOctokit(token);
-    this.repo = { owner: props.owner, repo: props.repo };
-  }
+    this.repo = {
+      owner: props.owner,
+      repo: props.repo,
+    };
 
-  private async getComment(): Promise<GitHubComment> {
-    const comment = await this.client.rest.issues.getComment({
-      ...this.repo,
-      comment_id: this.props.commentId,
-    });
+    this.comment = {
+      id: this.props.comment.id,
+      author: this.props.comment.user.login,
+      body: this.props.comment.body,
+    };
 
-    return {
-      id: comment.data.id,
-      author: comment.data.user!.login,
-      body: comment.data.body!,
+    this.pr = {
+      number: this.props.pr!.number,
+      labels: this.props.pr!.labels,
     };
   }
 
-  private async getPullRequest(): Promise<GitHubPullRequest> {
-    const pr = await this.client.rest.pulls.get({
-      ...this.repo,
-      pull_number: this.props.pullRequestNumber,
-    });
 
-    return {
-      author: pr.data.user!.login,
-      state: pr.data.state,
-      labels: pr.data.labels.map(label => label.name),
-    };
+  private pullRequestHasLabel(label?: Label): boolean {
+    return label ? this.pr.labels.includes(label) : false;
   }
 
-  private pullRequestHasLabel(pr: GitHubPullRequest, label?: Label): boolean {
-    return label ? pr.labels.includes(label) : false;
-  }
-
-  private commentHasText(comment: GitHubComment, text: CommentText): boolean {
-    return comment.body.includes(text.toLowerCase());
+  private commentHasText(text: CommentText): boolean {
+    return this.comment.body.includes(text.toLowerCase());
   }
 
   private async addLabelToPullRequest(label: Label): Promise<ReturnType<typeof this.client.rest.issues.addLabels>> {
     return this.client.rest.issues.addLabels({
       ...this.repo,
-      issue_number: this.props.pullRequestNumber,
+      issue_number: this.pr.number,
       labels: [{
         name: label,
       }],
@@ -128,35 +123,29 @@ export class PullRequestCommentBasedLabelManager {
   }
 
   private async tryAddLabel(options: TryAddLabelOptions): Promise<void> {
-    if (this.pullRequestHasLabel(options.pr, options.exception)) {
-      console.log(`Label '${options.label}' not added to PR ${this.props.pullRequestNumber} due to label '${options.exception}.'`);
+    if (this.pullRequestHasLabel(options.exception)) {
+      console.log(`Label '${options.label}' not added to PR ${this.pr.number} due to label '${options.exception}.'`);
     }
 
-    if (this.pullRequestHasLabel(options.pr, options.label)) {
-      console.log(`Label '${options.label}' not added to PR ${this.props.pullRequestNumber} because it is already present.`);
+    if (this.pullRequestHasLabel(options.label)) {
+      console.log(`Label '${options.label}' not added to PR ${this.pr.number} because it is already present.`);
     }
 
     const addLabelResponse = await this.addLabelToPullRequest(options.label);
-    console.log(`Label '${addLabelResponse.data[0].name}' added to PR ${this.props.pullRequestNumber}.`);
+    console.log(`Label '${addLabelResponse.data[0].name}' added to PR ${this.pr.number}.`);
   }
 
   public async addLabels() {
-    const comment = await this.getComment();
-    const pr = await this.getPullRequest();
 
-    if (this.commentHasText(comment, CommentText.CLARIFICATION_NEEDED)) {
+    if (this.commentHasText(CommentText.CLARIFICATION_NEEDED)) {
       await this.tryAddLabel({
         label: Label.CLARIFICATION_NEEDED,
-        comment,
-        pr,
       });
     }
 
-    if (this.commentHasText(comment, CommentText.EXEMPTION_REQUESTED)) {
+    if (this.commentHasText(CommentText.EXEMPTION_REQUESTED)) {
       await this.tryAddLabel({
         label: Label.EXEMPTION_REQUESTED,
-        comment,
-        pr,
         exception: Label.EXEMPTION_DENIED,
       });
     }

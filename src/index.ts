@@ -7,31 +7,21 @@ async function run() {
 
   const token: string = core.getInput('github-token', { required: true });
   console.log(token);
-  const commentId: string = core.getInput('comment-id', { required: true });
-  console.log(commentId);
-  const pullRequestNumber: string = core.getInput('pull-request-number', { required: true });
-  console.log(pullRequestNumber);
   console.log(github.context);
+  console.log('****************************************');
+  console.log(github.context.payload.pull_request);
+  console.log('****************************************');
+  console.log(github.context.payload.comment);
 
   const labelManager = new PullRequestCommentBasedLabelManager(token, {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
-    commentId: toInteger(commentId),
-    pullRequestNumber: toInteger(pullRequestNumber),
+    comment: github.context.payload.comment!,
+    pr: github.context.payload.pull_request!,
   });
 
   await labelManager.addLabels();
-
-
 };
-
-function toInteger(x: string): number {
-  const num = parseInt(x, 10);
-  if (`${num}` !== x) {
-    throw new Error(`Not a number: ${x}`);
-  }
-  return num;
-}
 
 run().catch(error => {
   core.setFailed(error.message);

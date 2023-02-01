@@ -14,6 +14,18 @@ const project = new GitHubActionTypeScriptProject({
         description: 'GitHub token',
         required: true,
       },
+      'comment-action': {
+        description: 'The type of action being performed on the comment (created/updated/deleted)',
+        required: true,
+      },
+      'comment-body': {
+        description: 'The id associated with the comment being tested',
+        required: true,
+      },
+      'pull-request-number': {
+        description: 'The number of the pull request where labels will be added',
+        required: true,
+      },
     },
   },
   devDeps: ['projen-github-action-typescript'],
