@@ -9,7 +9,7 @@ async function run() {
   console.log(token);
   console.log(github.context);
   console.log('****************************************');
-  console.log(github.context.payload.pull_request);
+  console.log(github.context.payload.issue);
   console.log('****************************************');
   console.log(github.context.payload.comment);
 
@@ -17,7 +17,7 @@ async function run() {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
     comment: github.context.payload.comment!,
-    pr: github.context.payload.pull_request!,
+    pr: github.context.payload.issue,
   });
 
   await labelManager.addLabels();
