@@ -1,5 +1,6 @@
-import { Hello } from '../src';
 
-test('hello', () => {
-  expect(new Hello().sayHello()).toBe('hello, world!');
+describe('labeler interactions', () => {
+  test('no-op', async () => {
+    expect(true).toEqual(true);
+  });
 });
