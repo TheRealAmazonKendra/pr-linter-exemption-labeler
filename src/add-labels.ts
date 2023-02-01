@@ -63,7 +63,6 @@ interface TryAddLabelOptions {
 export class PullRequestCommentBasedLabelManager {
   private readonly client: ReturnType<typeof github.getOctokit>;
   private readonly repo: { owner: string; repo: string };
-  private readonly labels: string[];
 
 
   constructor(token: string, private readonly props: PullRequestCommentBasedLabelManagerProps) {
@@ -72,13 +71,11 @@ export class PullRequestCommentBasedLabelManager {
       owner: props.owner,
       repo: props.repo,
     };
-
-    this.labels = props.labels;
   }
 
 
   private pullRequestHasLabel(label?: Label): boolean {
-    return label ? this.labels.includes(label) : false;
+    return label ? this.props.labels.includes(label) : false;
   }
 
   private commentHasText(text: CommentText): boolean {

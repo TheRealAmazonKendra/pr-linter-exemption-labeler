@@ -9,7 +9,7 @@ async function run() {
   console.log(token);
   console.log(github.context);
   console.log('****************************************');
-  console.log(github.context.payload.issue!.labels);
+  console.log(github.context.payload.issue!.labels.map((label: { name: any }) => label.name));
   console.log('****************************************');
   console.log(github.context.payload.comment!.body);
 
@@ -18,7 +18,7 @@ async function run() {
     repo: github.context.repo.repo,
     comment: github.context.payload.comment!.body,
     pr: github.context.payload.issue!.number,
-    labels: github.context.payload.issue!.labels,
+    labels: github.context.payload.issue!.labels.map((label: { name: any }) => label.name),
   });
 
   await labelManager.addLabels();
