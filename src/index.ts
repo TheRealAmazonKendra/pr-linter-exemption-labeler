@@ -14,7 +14,8 @@ async function run() {
     action: github.context.action,
   });
 
-  console.log(github.context);
+  console.log(github.context.action);
+  console.log(github.context.payload.action);
   console.log(await labelManager.manageLabels());
 };
 
