@@ -82,6 +82,8 @@ export class PullRequestCommentBasedLabelManager {
   }
 
   private pullRequestHasLabel(label?: string): boolean {
+    console.log(label);
+    console.log(this.props.labels);
     return label ? this.props.labels.some((l) => l.name === label) : false;
   }
 
