@@ -106,6 +106,7 @@ export class PullRequestCommentBasedLabelManager {
     }
 
     const addLabelResponse = await this.addLabelToPullRequest(options.label);
+    console.log(addLabelResponse);
     console.log(`Label '${addLabelResponse.data[0].name}' added to PR ${this.props.pr}.`);
   }
 
