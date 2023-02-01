@@ -1,11 +1,15 @@
 import * as github from '@actions/github';
 
+interface GitHubLabel {
+  readonly name: string;
+}
+
 interface PullRequestCommentBasedLabelManagerProps {
   readonly owner: string;
   readonly repo: string;
   readonly comment: string;
   readonly pr: number;
-  readonly labels: string[];
+  readonly labels: GitHubLabel[];
 }
 
 /**
@@ -73,16 +77,15 @@ export class PullRequestCommentBasedLabelManager {
     };
   }
 
-
-  private pullRequestHasLabel(label?: Label): boolean {
-    return label ? this.props.labels.includes(label) : false;
-  }
-
   private commentHasText(text: CommentText): boolean {
     return this.props.comment.includes(text.toLowerCase());
   }
 
-  private async addLabelToPullRequest(label: Label): Promise<ReturnType<typeof this.client.rest.issues.addLabels>> {
+  private pullRequestHasLabel(label?: string): boolean {
+    return label ? this.props.labels.some((l) => l.name === label) : false;
+  }
+
+  private async addLabelToPullRequest(label: string): Promise<ReturnType<typeof this.client.rest.issues.addLabels>> {
     return this.client.rest.issues.addLabels({
       ...this.repo,
       issue_number: this.props.pr,
