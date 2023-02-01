@@ -81,7 +81,7 @@ export class PullRequestCommentBasedLabelManager {
   }
 
   private commentHasText(text: CommentText): boolean {
-    return this.props.comment.includes(text.toLowerCase());
+    return this.props.comment.toLowerCase().includes(text);
   }
 
   private pullRequestHasLabel(label?: string): boolean {
@@ -113,18 +113,20 @@ export class PullRequestCommentBasedLabelManager {
   public async addLabels(): Promise<string[]> {
     const statuses: string[] = [];
     if (this.commentHasText(CommentText.CLARIFICATION_NEEDED)) {
+      statuses.push(`Clarification requested on PR ${this.props.pr}`);
       statuses.push(await this.tryAddLabel({
         label: Label.CLARIFICATION_NEEDED,
       }));
     }
 
     if (this.commentHasText(CommentText.EXEMPTION_REQUESTED)) {
+      statuses.push(`Exemption requested on PR ${this.props.pr}`);
       statuses.push(await this.tryAddLabel({
         label: Label.EXEMPTION_REQUESTED,
         exception: Label.EXEMPTION_DENIED,
       }));
     }
-
+    console.log(statuses);
     return statuses;
   }
 }
