@@ -1,28 +1,11 @@
 import * as github from '@actions/github';
-import { WebhookPayload } from '@actions/github/lib/interfaces';
-
-interface GitHubPullRequest {
-  readonly number: number;
-  readonly labels: string[];
-}
-
-interface GitHubComment {
-  readonly id: number;
-  readonly author: string;
-  readonly body: string;
-}
-
-interface ContextPayloadComment {
-  readonly [key: string]: any;
-  readonly id: number;
-
-}
 
 interface PullRequestCommentBasedLabelManagerProps {
   readonly owner: string;
   readonly repo: string;
-  readonly comment: ContextPayloadComment;
-  readonly pr: WebhookPayload['pull_request'];
+  readonly comment: string;
+  readonly pr: number;
+  readonly labels: string[];
 }
 
 /**
@@ -80,8 +63,7 @@ interface TryAddLabelOptions {
 export class PullRequestCommentBasedLabelManager {
   private readonly client: ReturnType<typeof github.getOctokit>;
   private readonly repo: { owner: string; repo: string };
-  private readonly comment: GitHubComment;
-  private readonly pr: GitHubPullRequest;
+  private readonly labels: string[];
 
 
   constructor(token: string, private readonly props: PullRequestCommentBasedLabelManagerProps) {
@@ -91,31 +73,22 @@ export class PullRequestCommentBasedLabelManager {
       repo: props.repo,
     };
 
-    this.comment = {
-      id: this.props.comment.id,
-      author: this.props.comment.user.login,
-      body: this.props.comment.body,
-    };
-
-    this.pr = {
-      number: this.props.pr!.number,
-      labels: this.props.pr!.labels,
-    };
+    this.labels = props.labels;
   }
 
 
   private pullRequestHasLabel(label?: Label): boolean {
-    return label ? this.pr.labels.includes(label) : false;
+    return label ? this.labels.includes(label) : false;
   }
 
   private commentHasText(text: CommentText): boolean {
-    return this.comment.body.includes(text.toLowerCase());
+    return this.props.comment.includes(text.toLowerCase());
   }
 
   private async addLabelToPullRequest(label: Label): Promise<ReturnType<typeof this.client.rest.issues.addLabels>> {
     return this.client.rest.issues.addLabels({
       ...this.repo,
-      issue_number: this.pr.number,
+      issue_number: this.props.pr,
       labels: [{
         name: label,
       }],
@@ -124,15 +97,15 @@ export class PullRequestCommentBasedLabelManager {
 
   private async tryAddLabel(options: TryAddLabelOptions): Promise<void> {
     if (this.pullRequestHasLabel(options.exception)) {
-      console.log(`Label '${options.label}' not added to PR ${this.pr.number} due to label '${options.exception}.'`);
+      console.log(`Label '${options.label}' not added to PR ${this.props.pr} due to label '${options.exception}.'`);
     }
 
     if (this.pullRequestHasLabel(options.label)) {
-      console.log(`Label '${options.label}' not added to PR ${this.pr.number} because it is already present.`);
+      console.log(`Label '${options.label}' not added to PR ${this.props.pr} because it is already present.`);
     }
 
     const addLabelResponse = await this.addLabelToPullRequest(options.label);
-    console.log(`Label '${addLabelResponse.data[0].name}' added to PR ${this.pr.number}.`);
+    console.log(`Label '${addLabelResponse.data[0].name}' added to PR ${this.props.pr}.`);
   }
 
   public async addLabels() {

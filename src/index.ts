@@ -9,15 +9,16 @@ async function run() {
   console.log(token);
   console.log(github.context);
   console.log('****************************************');
-  console.log(github.context.payload.issue);
+  console.log(github.context.payload.issue!.labels);
   console.log('****************************************');
-  console.log(github.context.payload.comment);
+  console.log(github.context.payload.comment!.body);
 
   const labelManager = new PullRequestCommentBasedLabelManager(token, {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
-    comment: github.context.payload.comment!,
-    pr: github.context.payload.issue,
+    comment: github.context.payload.comment!.body,
+    pr: github.context.payload.issue!.number,
+    labels: github.context.payload.issue!.labels,
   });
 
   await labelManager.addLabels();
