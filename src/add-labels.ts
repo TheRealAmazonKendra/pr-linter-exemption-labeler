@@ -10,6 +10,7 @@ interface PullRequestCommentBasedLabelManagerProps {
   readonly comment: string;
   readonly pr: number;
   readonly labels: GitHubLabel[];
+  readonly action: string;
 }
 
 /**
@@ -80,12 +81,44 @@ export class PullRequestCommentBasedLabelManager {
     this.labels = props.labels.map(label => label.name);
   }
 
-  private commentHasText(text: CommentText): boolean {
-    return this.props.comment.toLowerCase().includes(text);
+  public async manageLabels(): Promise<string[]> {
+    if (this.props.action === 'deleted') {
+      return this.removeLabels();
+    }
+    return this.addLabels();
   }
 
-  private pullRequestHasLabel(label?: string): boolean {
-    return label ? this.labels.includes(label) : false;
+  private async addLabels(): Promise<string[]> {
+    const statuses: string[] = [];
+    if (this.commentHasText(CommentText.CLARIFICATION_NEEDED)) {
+      statuses.push(`Clarification requested on PR ${this.props.pr}.`);
+      statuses.push(await this.tryAddLabel({
+        label: Label.CLARIFICATION_NEEDED,
+      }));
+    }
+
+    if (this.commentHasText(CommentText.EXEMPTION_REQUESTED)) {
+      statuses.push(`Exemption requested on PR ${this.props.pr}.`);
+      statuses.push(await this.tryAddLabel({
+        label: Label.EXEMPTION_REQUESTED,
+        exception: Label.EXEMPTION_DENIED,
+      }));
+    }
+    return statuses;
+  }
+
+  private async tryAddLabel(options: TryAddLabelOptions): Promise<string> {
+    if (this.pullRequestHasLabel(options.exception)) {
+      return `Label '${options.label}' not added to PR ${this.props.pr} due to label '${options.exception}.'`;
+    }
+
+    if (this.pullRequestHasLabel(options.label)) {
+      return `Label '${options.label}' not added to PR ${this.props.pr} because it has already been added.`;
+    }
+
+    const addLabelResponse = await this.addLabelToPullRequest(options.label);
+    console.log(addLabelResponse);
+    return `Label '${options.label}' added to PR ${this.props.pr}.`;
   }
 
   private async addLabelToPullRequest(label: string): Promise<ReturnType<typeof this.client.rest.issues.addLabels>> {
@@ -96,36 +129,43 @@ export class PullRequestCommentBasedLabelManager {
     });
   }
 
-  private async tryAddLabel(options: TryAddLabelOptions): Promise<string> {
-    if (this.pullRequestHasLabel(options.exception)) {
-      return `Label '${options.label}' not added to PR ${this.props.pr} due to label '${options.exception}.'`;
-    }
-
-    if (this.pullRequestHasLabel(options.label)) {
-      return `Label '${options.label}' not added to PR ${this.props.pr} because it is already present.`;
-    }
-
-    const addLabelResponse = await this.addLabelToPullRequest(options.label);
-    console.log(addLabelResponse);
-    return `Label '${addLabelResponse.data.pop()?.name}' added to PR ${this.props.pr}.`;
-  }
-
-  public async addLabels(): Promise<string[]> {
+  private async removeLabels(): Promise<string[]> {
     const statuses: string[] = [];
     if (this.commentHasText(CommentText.CLARIFICATION_NEEDED)) {
-      statuses.push(`Clarification requested on PR ${this.props.pr}`);
-      statuses.push(await this.tryAddLabel({
-        label: Label.CLARIFICATION_NEEDED,
-      }));
+      statuses.push(`Comment deleted requesting clarification on PR ${this.props.pr}.`);
+      statuses.push(await this.tryRemoveLabel(Label.CLARIFICATION_NEEDED));
     }
 
     if (this.commentHasText(CommentText.EXEMPTION_REQUESTED)) {
-      statuses.push(`Exemption requested on PR ${this.props.pr}`);
-      statuses.push(await this.tryAddLabel({
-        label: Label.EXEMPTION_REQUESTED,
-        exception: Label.EXEMPTION_DENIED,
-      }));
+      statuses.push(`Comment deleted requesting exemption on PR ${this.props.pr}.`);
+      statuses.push(await this.tryRemoveLabel(Label.EXEMPTION_REQUESTED));
     }
     return statuses;
+  }
+
+  private async tryRemoveLabel(label: string): Promise<string> {
+    if (this.pullRequestHasLabel(label)) {
+      const removeLabelResponse = await this.removeLabelFromPullRequest(label);
+      console.log(removeLabelResponse);
+      return `Label '${label} removed from PR ${this.props.pr}.`;
+    }
+
+    return `Label ${label} not removed from PR because it was not present.`;
+  }
+
+  private async removeLabelFromPullRequest(label: string) {
+    return this.client.rest.issues.removeLabel({
+      ...this.repo,
+      issue_number: this.props.pr,
+      name: label,
+    });
+  }
+
+  private commentHasText(text: CommentText): boolean {
+    return this.props.comment.toLowerCase().includes(text);
+  }
+
+  private pullRequestHasLabel(label?: string): boolean {
+    return label ? this.labels.includes(label) : false;
   }
 }

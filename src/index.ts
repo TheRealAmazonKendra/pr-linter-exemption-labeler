@@ -11,9 +11,11 @@ async function run() {
     comment: github.context.payload.comment!.body,
     pr: github.context.payload.issue!.number,
     labels: github.context.payload.issue!.labels,
+    action: github.context.action,
   });
 
-  console.log(await labelManager.addLabels());
+  console.log(github.context);
+  console.log(await labelManager.manageLabels());
 };
 
 run().catch(error => {
