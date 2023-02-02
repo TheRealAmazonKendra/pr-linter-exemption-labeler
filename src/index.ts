@@ -8,6 +8,8 @@ async function run() {
 
   const client = new Octokit({ auth: token });
 
+  console.log(github.context.payload);
+
   const labelManager = new PullRequestCommentBasedLabelManager({
     client,
     owner: github.context.repo.owner,
