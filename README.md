@@ -16,7 +16,7 @@ on:
 jobs:
   pr_commented:
     name: PR Comment
-    if: ${{ (github.event.issue.pull_request) && (github.event.issue.state == 'open') && (github.event.comment.user.login != 'aws-cdk-automation') }}
+    if: ${{ (github.event.issue.pull_request) && (github.event.issue.state == 'open') }}
     runs-on: ubuntu-latest
     steps:
       - uses: TheRealAmazonKendra/pr-linter-exemption-labeler@main

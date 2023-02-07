@@ -1,31 +1,41 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { Octokit } from '@octokit/rest';
-import { PullRequestCommentBasedLabelManager } from './add-labels';
+import { ActionType } from './common-types';
+import { GitHubClient } from './github-client';
+import { PullRequestCommentBasedLabelManager } from './label-manager';
+import { LabelUpdateAssessor } from './update-assessor';
+import { LabelUpdateCollector } from './update-collector';
 
 async function run() {
   const token: string = core.getInput('github-token', { required: true });
 
-  const client = new Octokit({ auth: token });
+  const pr = github.context.payload.issue!.number;
+  const actionType: ActionType = github.context.payload.action! as ActionType;
 
-  const labelManager = new PullRequestCommentBasedLabelManager({
-    client,
+  const gitHubClient = new GitHubClient(token, {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
-    comment: github.context.payload.comment!.body,
-    pr: github.context.payload.issue!.number,
-    labels: github.context.payload.issue!.labels,
-    action: github.context.payload.action!,
+    pr,
   });
 
-  const output = await labelManager.manageLabels();
+  const assessor = new LabelUpdateAssessor({
+    labels: github.context.payload.issue!.labels.map((label: { name: any }) => label.name),
+    client: gitHubClient,
+    comment: {
+      before: github.context.payload.changes?.body?.from,
+      after: github.context.payload.comment!.body,
+      author: github.context.payload.comment!.user.login,
+    },
+    actionType,
+  });
 
-  console.log('**************************************');
-  console.log('Summary: ');
-  output.forEach(x => console.log(`\t${x}`));
-  console.log('**************************************');
-};
+  const collector = new LabelUpdateCollector(assessor, pr);
+  const labelManager = new PullRequestCommentBasedLabelManager(collector);
 
-run().catch(error => {
+  await labelManager.manageLabels();
+  collector.printUpdates();
+}
+
+run().catch((error) => {
   core.setFailed(error.message);
 });
