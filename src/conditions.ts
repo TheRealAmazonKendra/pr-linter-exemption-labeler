@@ -128,5 +128,5 @@ function pullRequestHasLabel(labels: string[], label: Label): boolean {
  * @returns boolean
  */
 function commentAuthorIsAutomation(author: string) {
-  return author === 'aws-cdk-automation';
+  return author === 'github-actions[bot]';
 }
